@@ -38,10 +38,20 @@ function out = simulateVRBCReturn(radar_vel, radar_vib, var_tar, range_tar, az_a
     if mean(array_pos)~=0
         warning('Array does not appear to be centered at the assumed origin.')
     end
-    
     out = zeros(length(array_pos),samps_per_chirp,num_chirps);
     tar_phse = 2*pi*rand(1);
     a = sqrt(var_tar)*exp(1j*tar_phse);
+    if radar_vel(1)~=0
+        x = sqrt(range_tar^2+(radar_vel(1).*full_ts).^2-2*(range_tar.*(radar_vel(1).*full_ts)).*cosd(radar_vel(2)));
+    else
+        x = zeros(size(full_ts));
+    end
+    theta_new = az_angs_tar.*ones(size(full_ts));
+    for samp = 1:length(x)
+        if x(samp)~=0
+            theta_new(samp) = theta_new(samp)+asind(((radar_vel(1).*full_ts(samp))./x(samp)).*sind(radar_vel(2)-90+az_angs_tar));
+        end
+    end
     for elem = 1:length(array_pos)
         % Provide delay due to element position.
         r = range_tar+0.5*(array_pos(elem)*sind(az_angs_tar));

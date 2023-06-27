@@ -41,16 +41,26 @@ function out = simulateCltReturn(radar_vel, radar_vib, var_clts, range_clts, az_
     if length(unique([length(var_clts),length(range_clts),length(az_angs_clts)]))~=1
         warning('Clutter point powers, ranges, and angles do not indicate the same number of clutter points.')
     end
-    
     out = zeros(length(array_pos),samps_per_chirp,num_chirps);
     for cpt = 1:num_clt_pts
         clt_phse = 2*pi*rand(1);
         a = sqrt(var_clts(cpt))*exp(1j*clt_phse);
+        if radar_vel(1)~=0
+            x = sqrt(range_clts(cpt)^2+(radar_vel(1).*full_ts).^2-2*(range_clts(cpt).*(radar_vel(1).*full_ts)).*cosd(radar_vel(2)));
+        else
+            x = zeros(size(full_ts));
+        end
+        theta_new = az_angs_clts(cpt).*ones(size(full_ts));
+        for samp = 1:length(x)
+            if x(samp)~=0
+                theta_new(samp) = theta_new(samp)+asind(((radar_vel(1).*full_ts(samp))./x(samp)).*sind(radar_vel(2)-90+az_angs_clts(cpt)));
+            end
+        end
         for elem = 1:length(array_pos)
             % Provide delay due to element position.
-            r = range_clts(cpt)+0.5*(array_pos(elem)*sind(az_angs_clts(cpt)));
+            r = range_clts(cpt)+0.5*(array_pos(elem).*sind(theta_new));
             % Calculate the range over time given velocity of the radar and radar platform vibration
-            r = r-((radar_vel(1).*full_ts).*cosd(az_angs_clts(cpt)+radar_vel(2)))-radar_vib.*cosd(az_angs_clts(cpt));
+            r = r-((radar_vel(1).*full_ts).*cosd(theta_new+radar_vel(2)))-radar_vib.*cosd(theta_new);
             % Delay
             tau = 2.*r./3e8;
             % Calculate waveform
